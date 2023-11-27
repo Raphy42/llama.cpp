@@ -2,6 +2,18 @@
 
 #include "common/common.h"
 
+typedef struct s_callbacks {
+    OutputCallback output_callback = nullptr;
+    ModelReadyCallback model_ready_callback = nullptr;
+} Callbacks;
+
+static Callbacks* get_callbacks(const Backend* backend) {
+    if (backend->baton == nullptr) {
+        return nullptr;
+    }
+    return static_cast<Callbacks *>(backend->baton);
+}
+
 BuildInfo init_build_info() {
     return BuildInfo{
         .build_number = LLAMA_BUILD_NUMBER,
@@ -10,11 +22,6 @@ BuildInfo init_build_info() {
         .build_target = LLAMA_BUILD_TARGET,
     };
 }
-
-typedef struct s_callbacks {
-    OutputCallback output_callback = nullptr;
-    ModelReadyCallback model_ready_callback = nullptr;
-} Callbacks;
 
 Backend init_backend() {
     Backend backend;
@@ -67,15 +74,18 @@ static llama_context_params context_params_from_prediction_params(const Predicti
     return ctx_params;
 }
 
-int backend_start_prediction(Backend* backend, const PredictionParams& params) {
+int backend_start_prediction(Backend* backend, const PredictionParams&params) {
     if (backend->baton != nullptr) {
+        const auto callbacks = get_callbacks(backend);
+        if (callbacks->model_ready_callback == nullptr || callbacks->output_callback == nullptr) {
+            return BACKEND_MISSING_CALLBACKS;
+        }
         if (!backend->initialized) {
             llama_backend_init(params.use_numa);
             backend->initialized = true;
         }
-    }
-    else {
-        return BACKEND_MISSING_CALLBACKS;
+    } else {
+        return BACKEND_NOT_INITIALISED;
     }
     const llama_model_params m_params = model_params_from_prediction_params(params);
     llama_model* model = llama_load_model_from_file(params.model_filename, m_params);
@@ -169,7 +179,8 @@ int backend_start_prediction(Backend* backend, const PredictionParams& params) {
             llama_sampling_accept(ctx_sampling, ctx, id, true);
             embd.push_back(id);
             --n_remain;
-        } else {
+        }
+        else {
             while (embd_inp.size() > n_consumed) {
                 embd.push_back(embd_inp[n_consumed]);
                 llama_sampling_accept(ctx_sampling, ctx, embd_inp[n_consumed], false);
@@ -186,14 +197,6 @@ int backend_start_prediction(Backend* backend, const PredictionParams& params) {
     }
 
     return 0;
-}
-
-
-static Callbacks* get_callbacks(const Backend* backend) {
-    if (backend->baton == nullptr) {
-        return nullptr;
-    }
-    return static_cast<Callbacks *>(backend->baton);
 }
 
 void set_model_ready_callback(const Backend* backend, const ModelReadyCallback callback) {
