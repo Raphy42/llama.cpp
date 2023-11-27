@@ -99,6 +99,7 @@ option(LLAMA_QKK_64                          "llama: use super-block size of 64 
 option(LLAMA_BUILD_TESTS                "llama: build tests"    ${LLAMA_STANDALONE})
 option(LLAMA_BUILD_EXAMPLES             "llama: build examples" ${LLAMA_STANDALONE})
 option(LLAMA_BUILD_SERVER               "llama: build server example"                           ON)
+option(LLAMA_BUILD_FFI                  "llama: build ffi"                                      ON)
 
 #
 # Compile flags
@@ -791,3 +792,7 @@ if (LLAMA_BUILD_EXAMPLES)
     add_subdirectory(examples)
     add_subdirectory(pocs)
 endif()
+
+if (LLAMA_BUILD_FFI)
+    add_subdirectory(ffi)
+endif ()
