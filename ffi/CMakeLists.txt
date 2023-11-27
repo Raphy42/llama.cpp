@@ -12,3 +12,13 @@ endif ()
 target_include_directories(${TARGET} PUBLIC .)
 target_compile_features(${TARGET} PUBLIC cxx_std_11)
 target_link_libraries(${TARGET} PRIVATE llama)
+
+set_target_properties(ffi PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/ffi.h)
+install(TARGETS ffi LIBRARY PUBLIC_HEADER)
+
+if (LLAMA_STATIC)
+    add_link_options(-static)
+    if (MINGW)
+        add_link_options(-static-libgcc -static-libstdc++)
+    endif()
+endif()

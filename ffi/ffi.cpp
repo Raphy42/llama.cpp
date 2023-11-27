@@ -74,7 +74,7 @@ static llama_context_params context_params_from_prediction_params(const Predicti
     return ctx_params;
 }
 
-int backend_start_prediction(Backend* backend, const PredictionParams&params) {
+int backend_start_prediction(Backend* backend, PredictionParams params) {
     if (backend->baton != nullptr) {
         const auto callbacks = get_callbacks(backend);
         if (callbacks->model_ready_callback == nullptr || callbacks->output_callback == nullptr) {
@@ -129,7 +129,8 @@ int backend_start_prediction(Backend* backend, const PredictionParams&params) {
 
     std::vector<llama_token> embd;
 
-    llama_sampling_context* ctx_sampling = llama_sampling_init(params.sparams);
+    llama_sampling_params s_params;
+    llama_sampling_context* ctx_sampling = llama_sampling_init(s_params);
     while (n_remain != 0) {
         // predict
         if (!embd.empty()) {
@@ -199,7 +200,7 @@ int backend_start_prediction(Backend* backend, const PredictionParams&params) {
     return 0;
 }
 
-void set_model_ready_callback(const Backend* backend, const ModelReadyCallback callback) {
+void set_model_ready_callback(Backend* backend, const ModelReadyCallback callback) {
     const auto callbacks = get_callbacks(backend);
     if (callbacks == nullptr) {
         return;
@@ -207,7 +208,7 @@ void set_model_ready_callback(const Backend* backend, const ModelReadyCallback c
     callbacks->model_ready_callback = callback;
 }
 
-void set_output_callback(const Backend* backend, const OutputCallback callback) {
+void set_output_callback(Backend* backend, const OutputCallback callback) {
     const auto callbacks = get_callbacks(backend);
     if (callbacks == nullptr) {
         return;
