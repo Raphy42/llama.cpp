@@ -10,8 +10,8 @@ if (BUILD_SHARED_LIBS)
 endif ()
 
 target_include_directories(${TARGET} PUBLIC .)
+target_link_libraries(${TARGET} PRIVATE common llama)
 target_compile_features(${TARGET} PUBLIC cxx_std_11)
-target_link_libraries(${TARGET} PRIVATE llama)
 
 set_target_properties(ffi PROPERTIES PUBLIC_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/ffi.h)
 install(TARGETS ffi LIBRARY PUBLIC_HEADER)

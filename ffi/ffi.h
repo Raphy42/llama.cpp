@@ -2,15 +2,22 @@
 #include "llama.h"
 
 #ifdef __cplusplus
+#define ENUM_TYPE enum class
+#else
+#define ENUM_TYPE enum
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-#define BACKEND_NOT_INITIALISED -1
-#define BACKEND_MISSING_CALLBACKS -10
-#define BACKEND_MODEL_LOADING_ERROR -20
-#define BACKEND_CONTEXT_LOADING_ERROR -30
-#define BACKEND_PROMPT_TOO_LONG -40
-#define BACKEND_EVAL_FAILED -50
+#define BACKEND_NOT_INITIALISED (-1)
+#define BACKEND_MISSING_CALLBACKS (-10)
+#define BACKEND_MODEL_LOADING_ERROR (-20)
+#define BACKEND_CONTEXT_LOADING_ERROR (-30)
+#define BACKEND_SAMPLING_CONTEXT_LOADING_ERROR (-31)
+#define BACKEND_PROMPT_TOO_LONG (-40)
+#define BACKEND_EVAL_FAILED (-50)
 
 typedef struct s_build_info {
     int build_number;
@@ -23,6 +30,12 @@ BuildInfo init_build_info();
 
 typedef struct s_model_params {
     char const* name;
+    int32_t n_ctx;
+    int32_t n_ctx_train;
+    int32_t n_vocab;
+    bool has_metal;
+    bool has_cublas;
+    BuildInfo build_info;
 } ModelParams;
 
 typedef struct s_prediction_params {
@@ -83,6 +96,7 @@ typedef struct s_prediction_params {
 
     char const* model_filename;
     char const* prompt;
+    char const* grammar;
     bool use_numa;
 } PredictionParams;
 
@@ -91,19 +105,42 @@ typedef struct s_backend {
     void* baton;
 } Backend;
 
-Backend init_backend();
+Backend* init_backend();
 
-void free_backend(Backend backend);
+void free_backend(Backend* backend);
 
-int backend_start_prediction(Backend* backend, PredictionParams params);
+
+typedef struct s_session {
+    int32_t id;
+    char const* output;
+} Session;
+
+Session* init_session();
+
+int backend_start_prediction(Backend* backend, Session* session, PredictionParams params);
+
+void free_session(Session* session);
+
+typedef ENUM_TYPE s_backend_log_level: uint8_t {
+    TRACE = 1,
+    DEBUG = 2,
+    WARN = 3,
+    ERROR = 4,
+    INFO = 5,
+} BackendLogLevel;
+
 
 typedef void (*OutputCallback)(const char* token, bool is_eos);
 
 typedef void (*ModelReadyCallback)(const char* model, ModelParams params);
 
+typedef void (*LogCallback)(BackendLogLevel level, const char* message);
+
 void set_model_ready_callback(Backend* backend, ModelReadyCallback callback);
 
 void set_output_callback(Backend* backend, OutputCallback callback);
+
+void set_log_callback(Backend* backend, LogCallback callback);
 
 #ifdef __cplusplus
 }
