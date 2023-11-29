@@ -105,15 +105,22 @@ int backend_start_prediction(Backend* backend, Session* session, PredictionParam
     if (model == nullptr) {
         return BACKEND_MODEL_LOADING_ERROR;
     }
+    callbacks->log_callback(BackendLogLevel::DEBUG, "model loaded");
 
     const llama_context_params c_params = context_params_from_prediction_params(params);
+    if (c_params.n_ctx <= 0) {
+        return BACKEND_INVALID_PARAMS;
+    }
     llama_context* ctx = llama_new_context_with_model(model, c_params);
     if (ctx == nullptr) {
         llama_free_model(model);
         return BACKEND_CONTEXT_LOADING_ERROR;
     }
+    callbacks->log_callback(BackendLogLevel::DEBUG, "context loaded");
 
+    callbacks->log_callback(BackendLogLevel::DEBUG, "warming up model");
     warmup_model(params, ctx, model);
+    callbacks->log_callback(BackendLogLevel::DEBUG, "warmup done");
 
     const int n_ctx_train = llama_n_ctx_train(model);
     const int n_ctx = llama_n_ctx(ctx);
@@ -172,7 +179,7 @@ int backend_start_prediction(Backend* backend, Session* session, PredictionParam
     }
 
     std::string output = {};
-    output.reserve(std::min(std::max(0, params.n_predict), 1000));
+    output.reserve(std::max(std::min(0, params.n_predict), 1000));
 
     callbacks->log_callback(BackendLogLevel::INFO, "prediction started");
     while (n_remain != 0) {
